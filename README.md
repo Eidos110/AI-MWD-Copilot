@@ -1,5 +1,5 @@
 # 🏢 AI MWD Copilot  
-## Advanced Subsurface Intelligence System  
+## Advanced Subsurface for Real-Time Drilling Intelligence System
 ### Internal R&D Prototype | Version 1.0  
 **Prepared by**: Eidos/W_Isnal, Data Science & Geophysics  
 **Date**: Oct 2025  
