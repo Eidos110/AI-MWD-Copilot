@@ -74,7 +74,7 @@ To ensure operational realism, the following principles were enforced:
 | Model | Input Features | Key Drivers | RMSE / F1 | Notes |
 |------|----------------|------------|--------|-------|
 | **Porosity Predictor** | GR, Resistivity, ROP, WOB, Gas | Gamma Ray, Resistivity | RMSE = 0.038 | No direct porosity logs used |
-| **Fluid Classifier** | GR, MSE, ROP, Stick-Slip | Gas trend, resistivity rise | F1 = 0.89 | Flags pay zones before GC confirmation |
+| **Fluid Classifier** | GR, MSE, ROP, Stick-Slip | Gas trend, resistivity rise | F1 = 0.93 | Flags pay zones before GC confirmation |
 | **Pore Pressure Estimator** | Mud Weight, ECD, ROP, WOB | ECD gradient, ROP drop | RMSE = 48.58 | Alternative to drilling exponent |
 
 SHAP analysis confirms geologically consistent behavior across all models.
