@@ -357,7 +357,7 @@ models:
 - [x] Prediction report table with confidence bands
 - [x] Error recovery & defensive fallbacks
 
-### Level 3: Future Roadmap 🔮
+### Level 3: Future Roadmap
 - [ ] Model versioning & A/B testing UI
 - [ ] Sensor failure simulation mode
 - [ ] Lightweight "field deployment" mode (reduced features for real-time performance)
@@ -425,9 +425,8 @@ Test case: Neutron porosity unavailable (7% of wells in real operations)
 
 ### Contact
 For questions, bug reports, or feature requests:
-- 📧 Email: data-science@your-org.com
-- 🐙 GitHub Issues: [Link to repo]
-- 📚 Wiki: [Internal documentation link]
+- 📧 Email: wandaisnaldi77@gmail.com/wanda.isnaldi@yahoo.com
+- 🐙 GitHub Issues: [https://github.com/Eidos110/AI-MWD-Copilot]
 
 ---
 
@@ -443,7 +442,7 @@ For questions, bug reports, or feature requests:
 
 ## 📄 License
 
-This project is proprietary R&D. Distribution and use restricted to authorized personnel.
+This project is proprietary R&D. Distribution and use restricted to authorized personal.
 
 ---
 
