@@ -132,18 +132,26 @@ def compute_pore_pressure(df: pd.DataFrame, out_col: str = 'PREDICTED_PORE_PRESS
 
     # Use corrected drilling exponent to compute anomaly
     if dc_col in df.columns:
+        # Get drilling exponent values as float
         dc = df[dc_col].astype(float).values
-        # nominal exponent (calibrated ~1.0). Positive anomaly when dc < nominal
+        
+        # Nominal exponent (calibrated ~1.0). Positive anomaly when dc < nominal
         nominal = 1.0
-        # scale factor tuned for demo -- 1000 psi per 0.1 deviation
+        
+        # Handle missing values: replace NaN with nominal value
+        dc_with_nominal = np.where(np.isnan(dc), nominal, dc)
+        
+        # Scale factor tuned for demo -- 1000 psi per 0.1 deviation
         scale = 1000.0 / 0.1
-        anomaly = (nominal - dc) * scale
+        
+        # Calculate anomaly based on deviation from nominal
+        anomaly = (nominal - dc_with_nominal) * scale
     else:
+        # If no drilling exponent data available, use zero anomaly
         anomaly = np.zeros(n)
 
     psi = p_hydro_psi + anomaly
-    # Ensure no negative pressures
-    psi = np.where(np.isfinite(psi), psi, np.nan)
+    # Ensure no negative pressures but keep finite values when possible
     psi = np.clip(psi, 0.0, None)
 
     psi_result[:] = psi
