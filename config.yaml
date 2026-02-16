@@ -1,0 +1,101 @@
+# Application Configuration
+# Well-Logging-AI MWD Copilot Configuration File
+
+app:
+  title: "AI-Powered MWD Copilot"
+  version: "1.0.0"
+  author: "Well-Logging AI Team"
+  description: "Real-time ML system for drilling decision support"
+  
+streamlit:
+  page_config:
+    layout: "wide"
+    initial_sidebar_state: "expanded"
+  theme:
+    primaryColor: "#1f77b4"
+    backgroundColor: "#ffffff"
+    secondaryBackgroundColor: "#f0f2f6"
+
+data:
+  path: "data/ready_modelling.csv"
+  default_min_depth: 2000
+  default_max_depth: 2500
+  depth_presets:
+    shallow: [2000, 2500]
+    mid: [2500, 3000]
+    deep: [3000, 3500]
+
+models:
+  porosity:
+    path: "models/xgb_phi_model.pkl"
+    type: "XGBRegressor"
+    features: ["DEPTH", "Gamma Ray - Corrected gAPI", "Resistivity Phase - Corrected - 2MHz ohm.m",
+               "Corrected Drilling Exponent unitless", "ROP for the Bit - Distance Over Time (On Bottom) m/s",
+               "Surface Torque Average N.m", "Weight On Bit N", "Chrom 1 Total Gas Euc"]
+  
+  fluid:
+    path: "models/xgb_fluid_model.pkl"
+    encoder_path: "models/le.pkl"
+    type: "XGBClassifier"
+    classes: ["Background", "Pay Zone", "Potential Reservoir"]
+    features: ["DEPTH", "Gamma Ray - Corrected gAPI", "Corrected Drilling Exponent unitless",
+               "ROP for the Bit - Distance Over Time (On Bottom) m/s",
+               "Mechanical Specific Energy Pa", "Surface Torque Average N.m",
+               "Weight On Bit N", "28 Stick Slip RPM Average RPM"]
+  
+  pressure:
+    path: "models/xgb_pp_model_feat.pkl"
+    type: "XGBRegressor"
+    features: ["DEPTH", "Mud Weight In kg/m3", "ECD at Bit kg/m3", "Annular Pressure Pa",
+               "ROP for the Bit - Distance Over Time (On Bottom) m/s", "Weight On Bit N",
+               "Surface Torque Average N.m", "DEPTH_FT", "P_Hydrostatic",
+               "Delta_P_Hydro", "P_Overburden", "Effective_Stress", "Pressure_Anomaly"]
+
+targets:
+  porosity:
+    column: "PHI_COMBINED"
+    min: 0.0
+    max: 1.0
+    unit: "fraction (0-1)"
+    description: "Composite porosity from Wyllie density + neutron logs"
+  
+  fluid:
+    column: "FLUID_CLASS"
+    classes: ["Background", "Pay Zone", "Potential Reservoir"]
+    description: "Rule-based fluid type classification"
+  
+  pressure:
+    column: "PREDICTED_PORE_PRESSURE_PSI"
+    min: 0.0
+    unit: "PSI"
+    description: "Pore pressure from Rehm & McClendon method"
+
+visualization:
+  plot_width: 18
+  plot_height: 10
+  gr_max: 150
+  poro_max: 0.4
+  sample_size: 500
+
+shap:
+  enabled: true
+  top_n_features: 5
+  confidence_interval: 0.95
+  max_samples: 500
+
+export:
+  formats: ["csv", "json"]
+  include_confidence: true
+  include_intervals: true
+  timestamp: true
+
+quality:
+  check_missing_values: true
+  check_outliers: true
+  check_sensor_health: true
+  iqr_multiplier: 1.5
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/copilot.log"
