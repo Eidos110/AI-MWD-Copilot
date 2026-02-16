@@ -5,6 +5,12 @@ import matplotlib.colors
 from matplotlib.patches import Patch
 import seaborn as sns
 import numpy as np
+from src.config import (
+    COL_DEPTH, COL_GAMMA_RAY, COL_RESISTIVITY, COL_POROSITY,
+    COL_FLUID_CLASS, COL_PORE_PRESSURE, COL_WOB, COL_TORQUE,
+    FLUID_CLASS_MAP, FLUID_COLORS, PLOT_WIDTH, PLOT_HEIGHT,
+    GR_MAX, PORO_MAX
+)
 
 # Import config module and apply safe defaults in case tests mock src.config
 try:
