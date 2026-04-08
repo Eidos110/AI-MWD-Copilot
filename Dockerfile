@@ -11,11 +11,11 @@ COPY backend/ /app/backend/
 
 FROM node:20-alpine AS frontend-builder
 
-WORKDIR /app
+WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci
 
-COPY frontend/ .
+COPY frontend/ ./
 RUN npm run build
 
 FROM python:3.10-slim
@@ -28,9 +28,9 @@ COPY --from=backend-builder /usr/local/lib/python3.10/site-packages /usr/local/l
 COPY --from=backend-builder /usr/local/bin /usr/local/bin
 COPY --from=backend-builder /app/backend /app/backend
 
-COPY --from=frontend-builder /app/.next/standalone /app/frontend
-COPY --from=frontend-builder /app/.next/static /app/frontend/.next/static
-COPY --from=frontend-builder /app/public /app/frontend/public
+COPY --from=frontend-builder /app/frontend/.next/standalone ./
+COPY --from=frontend-builder /app/frontend/.next/static ./.next/static
+COPY --from=frontend-builder /app/frontend/public ./public
 
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
@@ -40,4 +40,4 @@ COPY nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "python -c \"import sys; sys.path.insert(0, '/app'); from backend.app import app\" & nginx -g 'daemon off;' & uvicorn backend.app:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "uvicorn backend.app:app --host 0.0.0.0 --port 8000 & nginx -g 'daemon off;'"]
