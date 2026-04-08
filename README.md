@@ -1,19 +1,11 @@
-<<<<<<< Updated upstream
-# 🏢 AI-Powered MWD Copilot  
-## Real-Time Machine Learning for Drilling Decision Support
-### Production-Ready Prototype | Version 2.0  
-**Prepared by**: Eidos/W_Isnal, Data Science & Geophysics
-**Date**: Feb 2026  
-**Project ID**: DS-GEO-AI-2025-002  
 =======
 # AI-Powered MWD Copilot
 
 Real-Time Machine Learning for Drilling Decision Support
 
+**Prepared by**: Eidos/W_Isnal, Data Science & Geophysics
 **Version**: 3.0 (FastAPI + Next.js)  
 **Date**: January 2026
->>>>>>> Stashed changes
-
 ---
 
 ## Architecture Overview
