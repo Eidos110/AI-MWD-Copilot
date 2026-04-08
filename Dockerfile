@@ -35,9 +35,10 @@ COPY --from=frontend-builder /app/frontend/public ./public
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 ENV NODE_ENV=production
+ENV PORT=8080
 
 COPY nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "uvicorn backend.app:app --host 0.0.0.0 --port 8000 & nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "export PORT=${PORT:-8080} && uvicorn backend.app:app --host 0.0.0.0 --port 8000 & nginx -g 'daemon off;'"]
