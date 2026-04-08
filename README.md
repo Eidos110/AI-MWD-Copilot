@@ -1,12 +1,12 @@
-=======
 # AI-Powered MWD Copilot
 
 Real-Time Machine Learning for Drilling Decision Support
 
 **Prepared by**: Eidos/W_Isnal, Data Science & Geophysics
+
 **Version**: 3.0 (FastAPI + Next.js)  
 **Date**: January 2026
----
+
 
 ## Architecture Overview
 
