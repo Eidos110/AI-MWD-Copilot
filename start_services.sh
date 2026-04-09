@@ -12,5 +12,14 @@ echo "Backend started (PID: $BACKEND_PID)"
 # Wait for backend to be ready
 sleep 5
 
-# Start nginx in foreground (this keeps container running)
+# Start Next.js frontend in background
+cd /app/frontend
+node server.js > /tmp/frontend.log 2>&1 &
+FRONTEND_PID=$!
+echo "Frontend started (PID: $FRONTEND_PID)"
+
+# Wait for frontend to be ready
+sleep 3
+
+# Start nginx in foreground
 nginx -g 'daemon off;'
