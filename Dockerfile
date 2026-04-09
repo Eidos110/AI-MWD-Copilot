@@ -33,6 +33,8 @@ COPY --from=frontend-builder /app/frontend/.next/static /app/frontend/.next/stat
 COPY --from=frontend-builder /app/frontend/public /app/public
 
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY start_services.sh /app/start_services.sh
+RUN chmod +x /app/start_services.sh
 
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
