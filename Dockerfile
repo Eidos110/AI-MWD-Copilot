@@ -37,8 +37,19 @@ ENV PYTHONUNBUFFERED=1
 ENV NODE_ENV=production
 ENV PORT=8080
 
-COPY nginx.conf /etc/nginx/nginx.conf
+RUN apt-get update && apt-get install -y curl nginx && rm -rf /var/lib/apt/lists/*
+
+COPY --from=backend-builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=backend-builder /usr/local/bin /usr/local/bin
+COPY --from=backend-builder /app/backend /app/backend
+
+COPY --from=frontend-builder /app/frontend/.next/standalone /app/frontend
+COPY --from=frontend-builder /app/frontend/.next/static /app/frontend/.next/static
+COPY --from=frontend-builder /app/frontend/public /app/public
+
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "export PORT=${PORT:-8080} && uvicorn backend.app:app --host 0.0.0.0 --port 8000 & nginx -g 'daemon off;'"]
+CMD ["/start.sh"]
