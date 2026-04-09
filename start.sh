@@ -3,20 +3,21 @@ set -e
 
 echo "Starting AI MWD Copilot..."
 
-# Start backend
+# Start backend in background
 cd /app
 uvicorn backend.app:app --host 0.0.0.0 --port 8000 &
-BACKEND_PID=$!
-echo "Backend started (PID: $BACKEND_PID)"
+echo "Backend started on port 8000"
 
-# Wait a bit for backend to start
+# Wait for backend to start
 sleep 3
 
-# Start frontend
+# Start frontend in background
 cd /app/frontend
 node server.js &
-FRONTEND_PID=$!
-echo "Frontend started (PID: $FRONTEND_PID)"
+echo "Frontend started on port 3000"
 
-# Wait for both
-wait
+# Wait for frontend to start
+sleep 3
+
+# Start nginx in foreground (this keeps container running)
+nginx -g 'daemon off;'
