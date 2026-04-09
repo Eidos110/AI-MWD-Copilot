@@ -27,7 +27,10 @@ COPY --from=backend-builder /usr/local/lib/python3.10/site-packages /usr/local/l
 COPY --from=backend-builder /usr/local/bin /usr/local/bin
 COPY --from=backend-builder /app/backend /app/backend
 
-COPY --from=frontend-builder /app/frontend /app/frontend
+# Copy the standalone Next.js build output
+COPY --from=frontend-builder /app/frontend/.next/standalone /app/frontend
+COPY --from=frontend-builder /app/frontend/.next/static /app/frontend/.next/static
+COPY --from=frontend-builder /app/frontend/public /app/public
 
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY start.sh /app/start.sh
