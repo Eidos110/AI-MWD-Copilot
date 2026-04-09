@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r re
 COPY backend/ /app/backend/
 
 FROM node:20-alpine AS frontend-builder
-WORKDIR /app
+WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci
 COPY frontend/ ./
@@ -25,6 +25,8 @@ COPY --from=backend-builder /app/backend /app/backend
 COPY --from=frontend-builder /app/frontend /app/frontend
 
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
@@ -32,4 +34,4 @@ ENV NODE_ENV=production
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "/app/start.sh"]
+CMD ["/app/start.sh"]
