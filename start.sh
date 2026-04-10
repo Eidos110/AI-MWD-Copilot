@@ -9,5 +9,5 @@ echo "Using port: $PORT"
 
 # Start backend in foreground on Railway port
 cd /app
-echo "Starting backend on port $PORT..."
-uvicorn backend.app:app --host 0.0.0.0 --port $PORT
+echo "Starting simple Python HTTP server on port $PORT..."
+python3 backend/app.py
