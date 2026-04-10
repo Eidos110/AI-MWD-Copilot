@@ -47,6 +47,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# Root endpoint for Railway health checks
+@app.get("/")
+async def root():
+    """Root endpoint for Railway health checks."""
+    return {"message": "AI MWD Copilot API is running"}
+
+
 # Mount routers
 from backend.api.routes import predict, data, quality, shap, health, interpret
 

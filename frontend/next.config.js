@@ -3,10 +3,10 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://backend:8000',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://frontend-production-d59e.up.railway.app',
   },
   rewrites: async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://backend:8000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://frontend-production-d59e.up.railway.app';
     return [
       {
         source: '/api/:path*',
