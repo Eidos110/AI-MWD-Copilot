@@ -4,7 +4,7 @@ set -e
 echo "Starting AI MWD Copilot..."
 
 # Get port from environment or default to 8080
-PORT=${PORT:-3000}
+PORT=${PORT:-8080}
 echo "Using port: $PORT"
 echo "Environment variables:"
 env | grep -E "(PORT|MWD_)" || echo "No MWD_ or PORT env vars found"
