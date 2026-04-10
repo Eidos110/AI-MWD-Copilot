@@ -17,4 +17,7 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
 
+# Set default port for Railway
+ENV PORT=8080
+
 CMD ["/app/start.sh"]
