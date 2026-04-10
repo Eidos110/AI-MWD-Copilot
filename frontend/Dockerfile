@@ -9,6 +9,10 @@ COPY . .
 
 RUN npm run build
 
+COPY . /app/.next/standalone
+
+WORKDIR /app/.next/standalone
+
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
