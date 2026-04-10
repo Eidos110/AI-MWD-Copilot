@@ -18,11 +18,17 @@ model_manager = None
 async def lifespan(app: FastAPI):
     """Load models on startup, cleanup on shutdown."""
     global model_manager
-    logger.info("Loading ML models...")
-    from backend.services.model_manager import ModelManager
+    try:
+        logger.info("Loading ML models...")
+        from backend.services.model_manager import ModelManager
 
-    model_manager = ModelManager()
-    logger.info("Models loaded. Application ready.")
+        model_manager = ModelManager()
+        logger.info("Models loaded. Application ready.")
+    except Exception as e:
+        logger.error(f"Failed to load models: {e}")
+        # Continue without models for now
+        model_manager = None
+        logger.info("Starting without models.")
     yield
     logger.info("Shutting down.")
 
