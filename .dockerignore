@@ -1,0 +1,7 @@
+# Ignore only build outputs and cache
+__pycache__/
+*.pyc
+*.pyo
+.next/
+node_modules/
+*.log
