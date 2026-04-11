@@ -3,22 +3,21 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://frontend-production-d59e.up.railway.app',
+    NEXT_PUBLIC_API_URL: 'https://backend-production-4622.up.railway.app',
   },
   rewrites: async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://frontend-production-d59e.up.railway.app';
     return [
       {
         source: '/api/:path*',
-        destination: `${apiUrl}/api/:path*`,
+        destination: 'https://backend-production-4622.up.railway.app/api/:path*',
       },
       {
         source: '/ws/:path*',
-        destination: `${apiUrl}/ws/:path*`,
+        destination: 'https://backend-production-4622.up.railway.app/ws/:path*',
       },
       {
         source: '/health',
-        destination: `${apiUrl}/health`,
+        destination: 'https://backend-production-4622.up.railway.app/health',
       },
     ];
   },
