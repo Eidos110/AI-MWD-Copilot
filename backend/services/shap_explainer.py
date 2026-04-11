@@ -15,9 +15,21 @@ import pandas as pd
 def _create_shap_explainer(model, X_sample):
     """Create SHAP explainer with XGBoost 2.0+ compatibility."""
     if isinstance(model, xgb.XGBModel):
-        # Wrap model's predict method to ignore deprecated ntree_limit argument
-        def safe_predict(data):
-            return model.predict(data, iteration_range=(0, model.best_iteration))
+        # Get the number of boosting rounds
+        try:
+            n_trees = model.num_boosted_rounds()
+        except Exception:
+            n_trees = None
+
+        # Wrap model's predict method
+        if n_trees:
+            # Use iteration_range to avoid ntree_limit issues
+            def safe_predict(data):
+                return model.predict(data, iteration_range=(0, n_trees))
+        else:
+            # No early stopping - just predict normally
+            def safe_predict(data):
+                return model.predict(data)
 
         # Use Explainer with wrapped predict function
         explainer = shap.Explainer(safe_predict, X_sample)
