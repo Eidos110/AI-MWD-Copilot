@@ -8,6 +8,15 @@ Provides functions to interpret ML predictions into actionable insights:
 
 from typing import Dict, List, Any, Optional, Tuple
 import numpy as np
+
+# Fix for deprecated np.int in newer numpy versions
+if not hasattr(np, "int"):
+    np.int = int
+if not hasattr(np, "float"):
+    np.float = float
+if not hasattr(np, "bool"):
+    np.bool = bool
+
 import pandas as pd
 
 

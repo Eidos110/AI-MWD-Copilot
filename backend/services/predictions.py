@@ -6,8 +6,13 @@ Provides utilities to:
 - Export predictions with confidence scores (in-memory, no file I/O)
 """
 
-import pandas as pd
 import numpy as np
+
+# Fix for deprecated np.int in newer numpy versions
+if not hasattr(np, "int"):
+    np.int = int
+
+import pandas as pd
 from typing import Tuple, Optional
 import json
 from datetime import datetime

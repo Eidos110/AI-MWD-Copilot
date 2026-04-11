@@ -2,6 +2,11 @@
 
 import logging
 import numpy as np
+
+# Fix for deprecated np.int in newer numpy versions
+if not hasattr(np, "int"):
+    np.int = int
+
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel

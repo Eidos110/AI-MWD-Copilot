@@ -9,6 +9,11 @@ Manages loading, validation, and inference for three predictive models:
 import logging
 import joblib
 import numpy as np
+
+# Fix for deprecated np.int in newer numpy versions
+if not hasattr(np, "int"):
+    np.int = int
+
 import pandas as pd
 from pathlib import Path
 from backend.core.config import settings
