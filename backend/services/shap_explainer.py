@@ -15,15 +15,12 @@ import pandas as pd
 def _create_shap_explainer(model, X_sample):
     """Create SHAP explainer with XGBoost 2.0+ compatibility."""
     if isinstance(model, xgb.XGBModel):
-        # For XGBoost 2.0+, use TreeExplainer without deprecated parameters
-        # Set model_output='raw' to avoid ntree_limit issues
-        try:
-            explainer = shap.TreeExplainer(
-                model, model_output="raw", feature_perturbation="tree_path_dependent"
-            )
-        except Exception:
-            # Fallback to basic TreeExplainer
-            explainer = shap.TreeExplainer(model)
+        # Wrap model's predict method to ignore deprecated ntree_limit argument
+        def safe_predict(data):
+            return model.predict(data, iteration_range=(0, model.best_iteration))
+
+        # Use Explainer with wrapped predict function
+        explainer = shap.Explainer(safe_predict, X_sample)
         return explainer
     else:
         return shap.Explainer(model.predict, X_sample)
@@ -145,14 +142,8 @@ def get_shap_interpretation(
         # Calculate SHAP values using new helper function
         explainer = _create_shap_explainer(model, X_sample)
 
-        if isinstance(model, xgb.XGBModel):
-            try:
-                shap_values = explainer.shap_values(X_sample)
-            except Exception:
-                # Try alternative for XGBoost 2.0+
-                shap_values = explainer(X_sample)
-        else:
-            shap_values = explainer(X_sample)
+        # Get SHAP values - use new API for Explainer
+        shap_values = explainer(X_sample)
 
         # Handle multi-class case: aggregate across classes
         if isinstance(shap_values, list):
