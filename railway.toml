@@ -1,0 +1,7 @@
+[deployment]
+deploymentStrategy = "nixpacks"
+buildCommand = "pip install -r backend/requirements.txt"
+startCommand = "bash start.sh"
+
+[project]
+name = "AI-MWD-Copilot"
