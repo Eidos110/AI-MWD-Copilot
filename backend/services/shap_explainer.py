@@ -12,6 +12,23 @@ if not hasattr(np, "float"):
 import pandas as pd
 
 
+def _create_shap_explainer(model, X_sample):
+    """Create SHAP explainer with XGBoost 2.0+ compatibility."""
+    if isinstance(model, xgb.XGBModel):
+        # For XGBoost 2.0+, use TreeExplainer without deprecated parameters
+        # Set model_output='raw' to avoid ntree_limit issues
+        try:
+            explainer = shap.TreeExplainer(
+                model, model_output="raw", feature_perturbation="tree_path_dependent"
+            )
+        except Exception:
+            # Fallback to basic TreeExplainer
+            explainer = shap.TreeExplainer(model)
+        return explainer
+    else:
+        return shap.Explainer(model.predict, X_sample)
+
+
 def explain_model(model, X_sample, feature_names, title="SHAP Summary"):
     """Generate SHAP explanation plot for model predictions.
 
@@ -37,12 +54,16 @@ def explain_model(model, X_sample, feature_names, title="SHAP Summary"):
             )
 
         # Check model type to select appropriate explainer
+        explainer = _create_shap_explainer(model, X_sample)
+
+        # Get SHAP values
         if isinstance(model, xgb.XGBModel):
-            explainer = shap.TreeExplainer(model)
-            shap_values = explainer.shap_values(X_sample)
+            try:
+                shap_values = explainer.shap_values(X_sample)
+            except Exception as e:
+                # Try alternative approach for XGBoost 2.0+
+                shap_values = explainer(X_sample)
         else:
-            # For non-tree models, use the generic explainer
-            explainer = shap.Explainer(model.predict, X_sample)
             shap_values = explainer(X_sample)
 
         plt.figure(figsize=(10, 6))
@@ -121,12 +142,16 @@ def get_shap_interpretation(
         if display_names is None:
             display_names = {name: name for name in feature_names}
 
-        # Calculate SHAP values
+        # Calculate SHAP values using new helper function
+        explainer = _create_shap_explainer(model, X_sample)
+
         if isinstance(model, xgb.XGBModel):
-            explainer = shap.TreeExplainer(model)
-            shap_values = explainer.shap_values(X_sample)
+            try:
+                shap_values = explainer.shap_values(X_sample)
+            except Exception:
+                # Try alternative for XGBoost 2.0+
+                shap_values = explainer(X_sample)
         else:
-            explainer = shap.Explainer(model.predict, X_sample)
             shap_values = explainer(X_sample)
 
         # Handle multi-class case: aggregate across classes
