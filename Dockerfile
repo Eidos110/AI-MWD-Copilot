@@ -18,9 +18,6 @@ EXPOSE 8000
 
 CMD ["/app/start.sh"]
 
-# Healthcheck targets the FastAPI /health endpoint.
-# RAILWAY_PUBLIC_DOMAIN contains the current deployment URL (e.g. mwd-backend-production.up.railway.app).
-# Falls back to localhost:8000 for local testing.
-# Healthcheck: contact the FastAPI /health endpoint inside the running container.
-# CMD-SHELL forces /bin/sh -c so the default call works without any env-var substitution.
-HEALTHCHECK --interval=10s --timeout=5s --retries=12 --start-period=30s CMD-SHELL curl -sf http://localhost:8000/health || exit 1
+# Healthcheck: /health must return HTTP 200 inside the running container.
+# Use "local" shell form so the command string is executed via /bin/sh -c.
+HEALTHCHECK --interval=10s --timeout=5s --retries=12 --start-period=30s CMD /bin/sh -c "curl -sf --max-time 3 http://localhost:8000/health && exit 0 || exit 1"
