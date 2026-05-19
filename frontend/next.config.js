@@ -1,23 +1,25 @@
 /** @type {import('next').NextConfig} */
+const RAILWAY_BACKEND = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   env: {
-    NEXT_PUBLIC_API_URL: 'https://backend-production-4622.up.railway.app',
+    NEXT_PUBLIC_API_URL: RAILWAY_BACKEND,
   },
   rewrites: async () => {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://backend-production-4622.up.railway.app/api/:path*',
+        destination: `${RAILWAY_BACKEND}/api/:path*`,
       },
       {
         source: '/ws/:path*',
-        destination: 'https://backend-production-4622.up.railway.app/ws/:path*',
+        destination: `${RAILWAY_BACKEND.replace(/^http/, 'ws')}/ws/:path*`,
       },
       {
         source: '/health',
-        destination: 'https://backend-production-4622.up.railway.app/health',
+        destination: `${RAILWAY_BACKEND}/health`,
       },
     ];
   },

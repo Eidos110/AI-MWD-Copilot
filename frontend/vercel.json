@@ -3,7 +3,7 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://frontend-production-d59e.up.railway.app"
+    "NEXT_PUBLIC_API_URL": "https://mwd-backend-production.up.railway.app"
   },
   "functions": {
     "pages/api/*.js": {
