@@ -1,6 +1,0 @@
-[deployment]
-build = "Dockerfile"
-rootDirectory = "frontend"
-
-[project]
-name = "AI-MWD-Copilot"

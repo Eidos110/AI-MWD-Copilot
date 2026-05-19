@@ -1,0 +1,71 @@
+# Railway Deployment Status - AI-MWD-Copilot
+
+## Completed Service Configuration (via Railway Public API)
+
+### Service Created
+- **Service Name**: mwd-backend
+- **Service ID**: `25d24257-bda3-4fa0-a6ab-4f797107da8e`
+- **Project**: AI-MWD-Copilot (`e48445d1-96b0-4ae5-807f-936e0c810009`)
+- **Environment**: production (`3a99af65-5039-4521-b81e-4a4b5e9fe47a`)
+- **Domain**: `mwd-backend-production.up.railway.app` ✅
+
+### Service Instance Configuration
+- **Builder**: RAILPACK
+- **rootDirectory**: `backend`
+- **buildCommand**: `pip install -r requirements.txt`
+- **startCommand**: `uvicorn backend.app:app --host 0.0.0.0 --port 8000`
+- **healthcheckPath**: `/health`
+
+### GitHub Integration
+- **Repository**: `Eidos110/Well_Logging_AI` - configured as source
+- **Status**: ⚠️ BLOCKED — Popaye's Railway account has NO GitHub account linked (`githubUsername: null`, `githubProviderId: null`)
+- **Required Action**: 
+  1. Login to Railway: `railway login` (interactive)
+  2. Connect GitHub account to Railway
+  3. Enable GitHub integration on the mwd-backend service
+
+## Rail deployment
+
+### Railway CLI Method (Preferred)
+requires the user to login in the run:
+```bash
+railway login --service mwd-backend --path backend
+# or from the project root
+railway up --service mwd-backend -d
+```
+
+### Via GitHub Integration
+```bash
+# After linking GitHub, push to trigger auto-deploy
+git push origin main
+```
+
+### Required Environment Variables
+
+For local development:
+```bash
+NEXT_PUBLIC_API_URL=https://mwd-backend-production.up.railway.app
+```
+
+For Railway service variables:
+```bash
+MWD_CORS_ORIGINS=*
+MWD_LOG_LEVEL=info
+```
+
+## Railway Config
+
+```json
+// .railway/config.json
+{
+  "projects": {
+    "E:\\Code\\Well-Logging-AI-AWD-Copilot-Deepseek": {
+      "project": "e48445d1-96b0-4ae5-807f-936e0c810009",
+      "environment": "3a99af65-5039-4521-b81e-4a4b5e9fe47a",
+      "service": "25d24257-bda3-4fa0-a6ab-4f797107da8e",
+      "name": "AI-MWD-Copilot",
+      "environmentName": "production"
+    }
+  }
+}
+```

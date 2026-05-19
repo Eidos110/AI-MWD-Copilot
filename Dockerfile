@@ -21,3 +21,5 @@ EXPOSE 8080
 ENV PORT=8080
 
 CMD ["/app/start.sh"]
+HEALTHCHECK --interval=10s --timeout=3s --retries=12 --start-period=30s \
+  CMD curl -sf http://localhost:${PORT:-8000}/health || exit 1

@@ -10,4 +10,4 @@ echo "Using port: $PORT"
 # Start backend in foreground on Railway port
 cd /app
 echo "Starting FastAPI backend on port $PORT..."
-uvicorn backend.app:app --host 0.0.0.0 --port $PORT
+exec uvicorn backend.app:app --host 0.0.0.0 --port "${PORT}"

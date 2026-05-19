@@ -7,12 +7,12 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 RUN mkdir -p /app/backend
-COPY backend/ /app/backend/
+COPY . /app/backend/
 
 ENV PYTHONPATH=/app
 
