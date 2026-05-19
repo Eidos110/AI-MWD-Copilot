@@ -1,7 +1,7 @@
 """FastAPI application entry point for AI-Powered MWD Copilot."""
 
 import logging
-from contextlib import asynccontextmanager
+import threading
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -9,32 +9,39 @@ from fastapi.middleware.gzip import GZipMiddleware
 logger = logging.getLogger(__name__)
 
 model_manager = None
+_model_lock = threading.Lock()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Load models on startup, cleanup on shutdown."""
+def _load_models_sync():
+    """Load ML models in a background thread (non-blocking for event loop)."""
     global model_manager
     try:
         logger.info("Loading ML models...")
-        from backend.services.model_manager import ModelManager
+        from backend.services.model_manager import ModelManager  # noqa: PLC0415
 
-        model_manager = ModelManager()
+        with _model_lock:
+            model_manager = ModelManager()
         logger.info("Models loaded. Application ready.")
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         logger.error(f"Failed to load models: {e}")
-        model_manager = None
+        with _model_lock:
+            model_manager = None
         logger.info("Starting without models.")
-    yield
-    logger.info("Shutting down.")
+
+
+def _start_background_model_loading():
+    """Spawn daemon thread to load models so /health is responsive immediately."""
+    threading.Thread(target=_load_models_sync, daemon=True).start()
 
 
 app = FastAPI(
     title="AI-Powered MWD Copilot",
     version="3.0.0",
     description="Real-time ML system for drilling decision support",
-    lifespan=lifespan,
 )
+
+# Kick off model loading as soon as the module is imported (non-blocking).
+_start_background_model_loading()
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
@@ -81,4 +88,7 @@ app.include_router(ws_router, tags=["websocket"])
 
 def get_model_manager():
     """Dependency to get the global model manager."""
+    global model_manager
+    if model_manager is None:
+        logger.warning("Model manager not initialized yet. Try again shortly.")
     return model_manager

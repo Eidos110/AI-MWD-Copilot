@@ -3,8 +3,8 @@ set -e
 
 echo "Starting AI MWD Copilot..."
 
-# Get port from environment or default to 8080
-PORT=${PORT:-8080}
+ # Get port from environment or default to 8000
+ PORT=${PORT:-8000}
 echo "Using port: $PORT"
 
 # Start backend in foreground on Railway port

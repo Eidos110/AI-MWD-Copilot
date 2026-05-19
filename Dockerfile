@@ -15,10 +15,10 @@ RUN chmod +x /app/start.sh
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-EXPOSE 8080
+ EXPOSE 8000
 
-# Set default port for Railway
-ENV PORT=8080
+ # Set default port for Railway
+ ENV PORT=8000
 
 CMD ["/app/start.sh"]
 HEALTHCHECK --interval=10s --timeout=3s --retries=12 --start-period=30s \
