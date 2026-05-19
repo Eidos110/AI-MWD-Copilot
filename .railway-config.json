@@ -1,71 +1,172 @@
-# Railway Deployment Status - AI-MWD-Copilot
+# Railway Deployment Status — AI-MWD-Copilot
 
-## Completed Service Configuration (via Railway Public API)
+> **Project**: AI-MWD-Copilot  
+> **Project Root**: `E:\Code\Well-Logging-AI-AWD-Copilot-Deepseek`  
+> **Last Updated**: 2026-05-19  
+> **Status**: mwd-backend fresh deploy triggered; mwd-frontend env var & redeploy pending 
+> **Railway Project**: `AI-MWD-Copilot` (`e48445d1-96b0-4ae5-807f-936e0c810009`)  
+> **Railway Env**: `production` (`3a99af65-5039-4521-b81e-4a4b5e9fe47a`)
 
-### Service Created
-- **Service Name**: mwd-backend
-- **Service ID**: `25d24257-bda3-4fa0-a6ab-4f797107da8e`
-- **Project**: AI-MWD-Copilot (`e48445d1-96b0-4ae5-807f-936e0c810009`)
-- **Environment**: production (`3a99af65-5039-4521-b81e-4a4b5e9fe47a`)
-- **Domain**: `mwd-backend-production.up.railway.app` ✅
+---
 
-### Service Instance Configuration
-- **Builder**: RAILPACK
-- **rootDirectory**: `backend`
-- **buildCommand**: `pip install -r requirements.txt`
-- **startCommand**: `uvicorn backend.app:app --host 0.0.0.0 --port 8000`
-- **healthcheckPath**: `/health`
+## Services Overview
 
-### GitHub Integration
-- **Repository**: `Eidos110/Well_Logging_AI` - configured as source
-- **Status**: ⚠️ BLOCKED — Popaye's Railway account has NO GitHub account linked (`githubUsername: null`, `githubProviderId: null`)
-- **Required Action**: 
-  1. Login to Railway: `railway login` (interactive)
-  2. Connect GitHub account to Railway
-  3. Enable GitHub integration on the mwd-backend service
+| Service | Service ID | Domain | Status |
+|---------|-----------|--------|--------|
+| `mwd-backend`  | `25d24257` | `mwd-backend-production.up.railway.app` | 🔄 Redeploy triggered |
+| `mwd-frontend` | `5876f291` | _(pending)_ | ⏳ Config + variables pending |
 
-## Rail deployment
+---
 
-### Railway CLI Method (Preferred)
-requires the user to login in the run:
-```bash
-railway login --service mwd-backend --path backend
-# or from the project root
-railway up --service mwd-backend -d
-```
+## mwd-backend — `25d24257`
 
-### Via GitHub Integration
-```bash
-# After linking GitHub, push to trigger auto-deploy
-git push origin main
-```
+### Current Railway Instance Config
 
-### Required Environment Variables
+| Field | Value |
+|-------|-------|
+| Builder | RAILPACK (legacy) |
+| rootDirectory | `backend` |
+| buildCommand | `pip install -r requirements.txt` |
+| startCommand | `uvicorn backend.app:app --host 0.0.0.0 --port 8000` |
+| healthcheckPath | `/health` |
 
-For local development:
-```bash
-NEXT_PUBLIC_API_URL=https://mwd-backend-production.up.railway.app
-```
+### Root Causes & Fixes (already committed)
 
-For Railway service variables:
-```bash
-MWD_CORS_ORIGINS=*
-MWD_LOG_LEVEL=info
-```
+| # | Cause | Fix Applied |
+|---|-------|-------------|
+| 1 | Root `Dockerfile` exposed port 8080 (legacy); Railway injects `PORT=8000` but healthcheck used `${PORT:-8000}` while container bound only to 8080 | `EXPOSE 8000` ✓ |
+| 2 | `start.sh` hardcoded shebang without `exec` pattern causing PID 1 mismatch | `exec uvicorn ...` + `PORT=${PORT:-8000}` ✓ |
+| 3 | `@asynccontextmanager` lifespan blocked FastAPI during ML model load (~10s) | Background `threading.Thread(daemon=True)` at import time ✓ |
 
-## Railway Config
+### Build Logs
+
+Latest deploy triggered: `railway up --service mwd-backend --detach`  
+Log URL: https://railway.com/project/e48445d1-96b0-4ae5-807f-936e0c810009/service/25d24257-bda3-4fa0-a6ab-4f797107da8e?id=9d11abe5-b654-4265-aa93-9e46bedf2e08
+
+---
+
+## mwd-frontend — `5876f291`
+
+### Current Railway Instance Config
+
+| Field | Value |
+|-------|-------|
+| Builder | RAILPACK (legacy) |
+| rootDirectory | _(not set)_ |
+| dockerfilePath | _(not set)_ |
+| buildCommand | _(not set)_ |
+| startCommand | _(not set)_ |
+| healthcheckPath | _(not set)_ |
+
+### Root Causes & Fixes
+
+| # | Cause | Fix Status |
+|---|-------|-----------|
+| 1 | Build/start/dockerfile config applied **after** build started; Railway does not re-trigger | Pending fresh deploy |
+| 2 | Multi-stage `frontend/Dockerfile` copies from `.next/standalone`; correct | ✓ File ready |
+| 3 | `NEXT_PUBLIC_API_URL` must be set in Railway service env vars, **not** hardcoded | ⏳ Needs user action via Railway dashboard |
+
+### Required Config
 
 ```json
-// .railway/config.json
 {
-  "projects": {
-    "E:\\Code\\Well-Logging-AI-AWD-Copilot-Deepseek": {
-      "project": "e48445d1-96b0-4ae5-807f-936e0c810009",
-      "environment": "3a99af65-5039-4521-b81e-4a4b5e9fe47a",
-      "service": "25d24257-bda3-4fa0-a6ab-4f797107da8e",
-      "name": "AI-MWD-Copilot",
-      "environmentName": "production"
-    }
-  }
+  "builder": "DOCKERFILE",
+  "rootDirectory": "frontend",
+  "dockerfilePath": "Dockerfile",
+  "buildCommand": "npm ci && npm run build",
+  "startCommand": "node server.js",
+  "healthcheckPath": "/"
 }
 ```
+
+### Required Env Vars
+
+| Variable | Value |
+|----------|-------|
+| `NEXT_PUBLIC_API_URL` | `https://mwd-backend-production.up.railway.app` |
+
+---
+
+## Root Dockerfile — `Dockerfile` (repo root)
+
+```dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+RUN apt-get update && apt-get install -y build-essential curl && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+
+COPY backend/             /app/backend/
+COPY start.sh             /app/start.sh
+RUN chmod +x /app/start.sh
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+CMD ["/app/start.sh"]
+```
+
+### start.sh
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+echo "Starting AI MWD Copilot..."
+
+PORT=${PORT:-8000}
+echo "Using port: $PORT"
+
+cd /app
+echo "Starting FastAPI backend on port $PORT..."
+exec uvicorn backend.app:app --host 0.0.0.0 --port "$PORT"
+```
+
+---
+
+## Frontend Dockerfile — `frontend/Dockerfile`
+
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+---
+
+## Railway CLI Notes
+
+- CLI user: `Popaye` (`popaye625@gmail.com`)
+- GitHub is **not linked** to Railway; `railway variables` / `railway up` requiring git access will fail
+- When GitHub is linked: `git push origin main` → auto-deploy
+- Manual deploy via CLI (once GitHub linked): `railway up --service mwd-backend`
+
+---
+
+## Required User Actions
+
+- [ ] **Link GitHub** to Railway (Railway dashboard → Settings → Integrations → GitHub) to enable `railway up` / auto-deploy
+- [ ] **Set env var** `NEXT_PUBLIC_API_URL=https://mwd-backend-production.up.railway.app` via Railway dashboard for `mwd-frontend`
+- [ ] **Switch mwd-backend** to DOCKERFILE builder (via Railway dashboard: Settings → Build & Deploy → Dockerfile, root `Dockerfile`)
+- [ ] **Switch mwd-frontend** to DOCKERFILE builder (via Railway dashboard: Settings → Build & Deploy → Dockerfile, `frontend/Dockerfile`)
+- [ ] **Trigger fresh deploy** for both services after config changes
+- [ ] **Verify** `GET https://mwd-backend-production.up.railway.app/health` → `{"status":"healthy"}`
+- [ ] **Verify** `GET <mwd-frontend-domain>/health` → proxies to backend, returns `{"status":"healthy"}`

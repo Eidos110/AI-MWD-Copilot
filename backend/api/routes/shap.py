@@ -1,9 +1,8 @@
-"""SHAP model interpretability API routes."""
+"""SHAP model interpretability API routes — with safe lazy imports."""
 
 import logging
 import numpy as np
 
-# Fix for deprecated np.int in newer numpy versions
 if not hasattr(np, "int"):
     np.int = int
 
@@ -12,28 +11,47 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
-from backend.services.model_manager import (
-    ModelManager,
-    FEATURES_POROSITY,
-    FEATURES_FLUID,
-    FEATURES_PRESSURE,
-)
-from backend.services.shap_explainer import get_shap_interpretation
-
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-_manager: Optional[ModelManager] = None
+# --- module-level feature sets (safe: no model_manager dependency) ----------
+_POROSITY_FEATURES = [
+    "DEPTH",
+    "Gamma Ray - Corrected gAPI",
+    "Resistivity Phase - Corrected - 2MHz ohm.m",
+    "Corrected Drilling Exponent unitless",
+    "ROP for the Bit - Distance Over Time (On Bottom) m/s",
+    "Surface Torque Average N.m",
+    "Weight On Bit N",
+    "Chrom 1 Total Gas Euc",
+]
 
+_FLUID_FEATURES = [
+    "DEPTH",
+    "Gamma Ray - Corrected gAPI",
+    "Corrected Drilling Exponent unitless",
+    "ROP for the Bit - Distance Over Time (On Bottom) m/s",
+    "Mechanical Specific Energy Pa",
+    "Surface Torque Average N.m",
+    "Weight On Bit N",
+    "28 Stick Slip RPM Average RPM",
+]
 
-def get_manager() -> ModelManager:
-    global _manager
-    if _manager is None:
-        from backend.app import get_model_manager
-
-        _manager = get_model_manager()
-    return _manager
-
+_PRESSURE_FEATURES = [
+    "DEPTH",
+    "Mud Weight In kg/m3",
+    "ECD at Bit kg/m3",
+    "Annular Pressure Pa",
+    "ROP for the Bit - Distance Over Time (On Bottom) m/s",
+    "Weight On Bit N",
+    "Surface Torque Average N.m",
+    "DEPTH_FT",
+    "P_Hydrostatic",
+    "Delta_P_Hydro",
+    "P_Overburden",
+    "Effective_Stress",
+    "Pressure_Anomaly",
+]
 
 SHAP_FEATURE_DISPLAY_NAMES = {
     "DEPTH": "Well Depth (m)",
@@ -58,6 +76,31 @@ SHAP_FEATURE_DISPLAY_NAMES = {
 }
 
 
+# --- lazy ModelManager ------------------------------------------------------
+_manager: Optional["ModelManager"] = None
+
+
+def _load_manager():
+    """Lazily import and instantiate the real ModelManager on first use."""
+    global _manager
+    if _manager is None:
+        try:
+            from backend.services.model_manager import ModelManager  # noqa: PLC0415
+            _manager = ModelManager()
+        except Exception as exc:
+            logger.error("ModelManager unavailable: %s", exc)
+            # Use a stub so SHAP still returns a helpful error rather than 500.
+            class _Stub:
+                porosity_model = None
+                fluid_model = None
+                pressure_model = None
+                def _safe_select(self, *a, **kw):
+                    raise RuntimeError("ModelManager unavailable — models not loaded yet.")
+            _manager = _Stub()
+    return _manager
+
+
+# --- route handlers --------------------------------------------------------
 class ShapRequest(BaseModel):
     model: str  # "porosity", "fluid", "pressure"
     data: List[Dict[str, Any]]
@@ -72,11 +115,17 @@ class ShapResponse(BaseModel):
     importance: List[Dict[str, Any]]
 
 
+def _get_shap_func():
+    """Lazily import the SHAP interpreter."""
+    from backend.services.shap_explainer import get_shap_interpretation  # noqa: PLC0415
+    return get_shap_interpretation
+
+
 @router.post("/shap/explain", response_model=ShapResponse)
 async def explain_model(req: ShapRequest):
     """Generate SHAP explanation for a specific model."""
     try:
-        mgr = get_manager()
+        mgr = _load_manager()
         df = pd.DataFrame(req.data)
 
         if len(df) == 0:
@@ -85,16 +134,15 @@ async def explain_model(req: ShapRequest):
         # Select model and features
         if req.model == "porosity":
             model = mgr.porosity_model
-            features = FEATURES_POROSITY
+            features = _POROSITY_FEATURES
             X = mgr._safe_select(df, features, "porosity")
         elif req.model == "fluid":
             model = mgr.fluid_model
-            features = FEATURES_FLUID
+            features = _FLUID_FEATURES
             X = mgr._safe_select(df, features, "fluid")
         elif req.model == "pressure":
             model = mgr.pressure_model
-            features = FEATURES_PRESSURE
-            X = mgr._safe_select(df, features, "pressure", force_full=True)
+            X = mgr._safe_select(df, _PRESSURE_FEATURES, "pressure", force_full=True)
         else:
             raise HTTPException(status_code=400, detail=f"Unknown model: {req.model}")
 
@@ -104,6 +152,7 @@ async def explain_model(req: ShapRequest):
         X = X.fillna(X.mean()).fillna(0)
         sample = X.sample(n=min(req.max_samples, len(X)), random_state=42)
 
+        get_shap_interpretation = _get_shap_func()
         interpretation = get_shap_interpretation(
             model,
             sample,
@@ -122,6 +171,8 @@ async def explain_model(req: ShapRequest):
             "top_negative": interpretation["top_negative"],
             "importance": importance_list,
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"SHAP explanation failed: {e}")
+        logger.error("SHAP explanation failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))

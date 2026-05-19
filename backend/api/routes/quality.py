@@ -13,15 +13,53 @@ from backend.services.data_quality import (
     compute_sensor_health,
     generate_quality_report,
 )
-from backend.services.model_manager import (
-    FEATURES_POROSITY,
-    FEATURES_FLUID,
-    FEATURES_PRESSURE,
-)
+# Lazy-load DISPLAY_COLS so route module is importable even before
+# data_loader or model_manager are ready.
 from backend.services.data_loader import DISPLAY_COLS
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Feature sets duplicated here to avoid a hard import of model_manager
+# at module level. The single source of truth is
+#   backend/services/model_manager.py
+_POROSITY_FEATURES = [
+    "DEPTH",
+    "Gamma Ray - Corrected gAPI",
+    "Resistivity Phase - Corrected - 2MHz ohm.m",
+    "Corrected Drilling Exponent unitless",
+    "ROP for the Bit - Distance Over Time (On Bottom) m/s",
+    "Surface Torque Average N.m",
+    "Weight On Bit N",
+    "Chrom 1 Total Gas Euc",
+]
+
+_FLUID_FEATURES = [
+    "DEPTH",
+    "Gamma Ray - Corrected gAPI",
+    "Corrected Drilling Exponent unitless",
+    "ROP for the Bit - Distance Over Time (On Bottom) m/s",
+    "Mechanical Specific Energy Pa",
+    "Surface Torque Average N.m",
+    "Weight On Bit N",
+    "28 Stick Slip RPM Average RPM",
+]
+
+_PRESSURE_FEATURES = [
+    "DEPTH",
+    "Mud Weight In kg/m3",
+    "ECD at Bit kg/m3",
+    "Annular Pressure Pa",
+    "ROP for the Bit - Distance Over Time (On Bottom) m/s",
+    "Weight On Bit N",
+    "Surface Torque Average N.m",
+    "DEPTH_FT",
+    "P_Hydrostatic",
+    "Delta_P_Hydro",
+    "P_Overburden",
+    "Effective_Stress",
+    "Pressure_Anomaly",
+]
 
 
 class QualityRequest(BaseModel):
@@ -47,9 +85,9 @@ async def get_quality_report(req: QualityRequest):
             df,
             critical_cols=[c for c in DISPLAY_COLS if c in df.columns],
             feature_groups={
-                "Porosity": [f for f in FEATURES_POROSITY if f in df.columns],
-                "Fluid": [f for f in FEATURES_FLUID if f in df.columns],
-                "Pressure": [f for f in FEATURES_PRESSURE if f in df.columns],
+                "Porosity": [f for f in _POROSITY_FEATURES if f in df.columns],
+                "Fluid": [f for f in _FLUID_FEATURES if f in df.columns],
+                "Pressure": [f for f in _PRESSURE_FEATURES if f in df.columns],
             },
         )
 
@@ -63,5 +101,5 @@ async def get_quality_report(req: QualityRequest):
             "summary": report["summary"],
         }
     except Exception as e:
-        logger.error(f"Quality report failed: {e}")
+        logger.error("Quality report failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))

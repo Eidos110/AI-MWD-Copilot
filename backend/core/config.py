@@ -5,6 +5,7 @@ All settings can be overridden via environment variables with the prefix MWD_.
 """
 
 import os
+import json
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from typing import List

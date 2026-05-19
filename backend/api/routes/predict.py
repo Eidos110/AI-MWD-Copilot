@@ -1,9 +1,9 @@
-"""Prediction API routes."""
+"""Predict API routes — lazy imports so route module is safe to import
+even if backend.services.model_manager is not yet available."""
 
 import logging
 import numpy as np
 
-# Fix for deprecated np.int in newer numpy versions
 if not hasattr(np, "int"):
     np.int = int
 
@@ -12,32 +12,42 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
-from backend.services.model_manager import ModelManager
-from backend.services.predictions import (
-    compute_prediction_confidence,
-    compute_prediction_intervals,
-    create_prediction_report,
-)
-
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Global model manager reference
-_manager: Optional[ModelManager] = None
+# Global model manager reference — None until first use.
+_manager: Optional["ModelManager"] = None
 
 
-def get_manager() -> ModelManager:
+class _StubModelManager:
+    """Fallback stub used when the real ModelManager cannot be imported.
+    This keeps the import / module-level annotation from crashing the
+    app on startup so FASTAPI always responds, even without cached models.
+    """
+    def predict_porosity(self, df):
+        raise RuntimeError("ModelManager unavailable — models not loaded yet.")
+    def predict_fluid(self, df):
+        raise RuntimeError("ModelManager unavailable — models not loaded yet.")
+    def predict_pressure(self, df):
+        raise RuntimeError("ModelManager unavailable — models not loaded yet.")
+
+
+def _load_manager():
+    """Lazily import and instantiate the real ModelManager on first use."""
     global _manager
     if _manager is None:
-        from backend.app import get_model_manager
-
-        _manager = get_model_manager()
+        try:
+            from backend.services.model_manager import ModelManager  # noqa: PLC0415
+            _manager = ModelManager()
+        except Exception as exc:
+            logger.error("ModelManager unavailable: %s", exc)
+            _manager = _StubModelManager()
     return _manager
 
 
-class DataRow(BaseModel):
-    DEPTH: float
-    model_config = {"extra": "allow"}
+def get_manager():
+    """Return the (possibly stub) model manager."""
+    return _load_manager()
 
 
 class PredictRequest(BaseModel):
@@ -88,32 +98,11 @@ async def predict_porosity(req: PredictRequest):
     try:
         mgr = get_manager()
         df = _df_from_request(req)
-        if len(df) == 0:
-            raise HTTPException(
-                status_code=400, detail="No data in specified depth range"
-            )
-
-        predictions = mgr.predict_porosity(df)
-        result = {"predictions": predictions.tolist()}
-
-        if req.include_confidence:
-            X = mgr._safe_select(
-                df,
-                mgr.porosity_model.get_booster().feature_names
-                if hasattr(mgr.porosity_model, "get_booster")
-                else [],
-                "porosity",
-            )
-            if not X.empty:
-                X = X.fillna(X.mean())
-                conf = compute_prediction_confidence(mgr.porosity_model, X, predictions)
-                result["confidence"] = conf.tolist()
-                lower, upper = compute_prediction_intervals(predictions, conf)
-                result["intervals"] = {"lower": lower.tolist(), "upper": upper.tolist()}
-
-        return result
+        preds = mgr.predict_porosity(df).tolist()
+        return PorosityResponse(predictions=preds)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        logger.error(f"Porosity prediction failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -123,19 +112,15 @@ async def predict_fluid(req: PredictRequest):
     try:
         mgr = get_manager()
         df = _df_from_request(req)
-        if len(df) == 0:
-            raise HTTPException(
-                status_code=400, detail="No data in specified depth range"
-            )
-
-        fluid_classes, fluid_probs = mgr.predict_fluid(df)
-        return {
-            "predictions": fluid_classes.tolist(),
-            "probabilities": fluid_probs.tolist(),
-            "classes": list(mgr.fluid_encoder.classes_),
-        }
+        preds, proba = mgr.predict_fluid(df)
+        return FluidResponse(
+            predictions=preds.tolist(),
+            probabilities=proba.tolist(),
+            classes=["Background", "Potential Reservoir", "Pay Zone"],
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        logger.error(f"Fluid prediction failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -145,123 +130,51 @@ async def predict_pressure(req: PredictRequest):
     try:
         mgr = get_manager()
         df = _df_from_request(req)
-        if len(df) == 0:
-            raise HTTPException(
-                status_code=400, detail="No data in specified depth range"
-            )
-
-        pp_pred = mgr.predict_pressure(df)
-        if pp_pred is None:
-            raise HTTPException(
-                status_code=500, detail="Pressure prediction unavailable"
-            )
-
-        result = {"predictions": pp_pred.tolist()}
-
-        if req.include_confidence:
-            X = mgr._safe_select(df, [], "pressure", force_full=True)
-            if not X.empty:
-                X = X.fillna(X.mean()).fillna(0)
-                expected = mgr.pressure_model.get_booster().feature_names
-                for f in expected:
-                    if f not in X.columns:
-                        X[f] = 0
-                X = X[expected]
-                conf = compute_prediction_confidence(mgr.pressure_model, X, pp_pred)
-                result["confidence"] = conf.tolist()
-                lower, upper = compute_prediction_intervals(pp_pred, conf)
-                result["intervals"] = {"lower": lower.tolist(), "upper": upper.tolist()}
-
-        return result
+        preds = mgr.predict_pressure(df)
+        if preds is None:
+            raise HTTPException(status_code=422, detail="Pressure prediction unavailable")
+        return PressureResponse(predictions=preds.tolist())
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Pressure prediction failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/predict/all", response_model=AllPredictionsResponse)
 async def predict_all(req: PredictRequest):
-    """Run all three prediction models at once."""
+    """Run all three predictions and return a combined report."""
+    result = AllPredictionsResponse()
     try:
         mgr = get_manager()
         df = _df_from_request(req)
-        if len(df) == 0:
-            raise HTTPException(
-                status_code=400, detail="No data in specified depth range"
+
+        try:
+            p = mgr.predict_porosity(df)
+            result.porosity = PorosityResponse(predictions=p.tolist())
+        except Exception as e:
+            logger.warning("Porosity prediction failed: %s", e)
+
+        try:
+            preds, proba = mgr.predict_fluid(df)
+            result.fluid = FluidResponse(
+                predictions=preds.tolist(),
+                probabilities=proba.tolist(),
+                classes=["Background", "Potential Reservoir", "Pay Zone"],
             )
-
-        response = {}
-        predictions = {}
-        confidences = {}
-
-        # Porosity
-        try:
-            phi_pred = mgr.predict_porosity(df)
-            predictions["phi_pred"] = phi_pred
-            response["porosity"] = {"predictions": phi_pred.tolist()}
-            if req.include_confidence:
-                X = mgr._safe_select(df, [], "porosity")
-                if not X.empty:
-                    X = X.fillna(X.mean())
-                    conf = compute_prediction_confidence(
-                        mgr.porosity_model, X, phi_pred
-                    )
-                    confidences["phi_conf"] = conf
-                    response["porosity"]["confidence"] = conf.tolist()
-                    lower, upper = compute_prediction_intervals(phi_pred, conf)
-                    response["porosity"]["intervals"] = {
-                        "lower": lower.tolist(),
-                        "upper": upper.tolist(),
-                    }
         except Exception as e:
-            logger.warning(f"Porosity prediction failed: {e}")
+            logger.warning("Fluid prediction failed: %s", e)
 
-        # Fluid
         try:
-            fluid_classes, fluid_probs = mgr.predict_fluid(df)
-            predictions["fluid_pred"] = fluid_classes
-            predictions["fluid_prob"] = fluid_probs
-            response["fluid"] = {
-                "predictions": fluid_classes.tolist(),
-                "probabilities": fluid_probs.tolist(),
-                "classes": list(mgr.fluid_encoder.classes_),
-            }
+            p = mgr.predict_pressure(df)
+            if p is not None:
+                result.pressure = PressureResponse(predictions=p.tolist())
         except Exception as e:
-            logger.warning(f"Fluid prediction failed: {e}")
+            logger.warning("Pressure prediction failed: %s", e)
 
-        # Pressure
-        try:
-            pp_pred = mgr.predict_pressure(df)
-            if pp_pred is not None:
-                predictions["pp_pred"] = pp_pred
-                response["pressure"] = {"predictions": pp_pred.tolist()}
-                if req.include_confidence:
-                    X = mgr._safe_select(df, [], "pressure", force_full=True)
-                    if not X.empty:
-                        X = X.fillna(X.mean()).fillna(0)
-                        expected = mgr.pressure_model.get_booster().feature_names
-                        for f in expected:
-                            if f not in X.columns:
-                                X[f] = 0
-                        X = X[expected]
-                        conf = compute_prediction_confidence(
-                            mgr.pressure_model, X, pp_pred
-                        )
-                        confidences["pp_conf"] = conf
-                        response["pressure"]["confidence"] = conf.tolist()
-                        lower, upper = compute_prediction_intervals(pp_pred, conf)
-                        response["pressure"]["intervals"] = {
-                            "lower": lower.tolist(),
-                            "upper": upper.tolist(),
-                        }
-        except Exception as e:
-            logger.warning(f"Pressure prediction failed: {e}")
+    except RuntimeError as e:
+        detail = f"Models not ready: {e} — run /api/v1/health before predictions"
+        raise HTTPException(status_code=503, detail=detail)
 
-        # Generate report
-        if predictions:
-            report_df = create_prediction_report(df, predictions, confidences)
-            response["report"] = report_df.to_dict(orient="records")
-
-        return response
-    except Exception as e:
-        logger.error(f"All predictions failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return result
