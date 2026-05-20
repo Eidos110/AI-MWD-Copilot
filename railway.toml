@@ -1,0 +1,23 @@
+[build]
+  builder = "DOCKERFILE"
+
+[deploy]
+  restartPolicy = "on_failure"
+
+[services.mwd-backend]
+  build = {
+    dockerfilePath = "Dockerfile",
+    context = "."
+  }
+  healthcheckPath = "/health"
+  healthcheckTimeout = 60
+  restartPolicy = "on_failure"
+
+[services.mwd-frontend]
+  build = {
+    dockerfilePath = "Dockerfile",
+    context = "frontend"
+  }
+  healthcheckPath = "/"
+  healthcheckTimeout = 60
+  restartPolicy = "on_failure"

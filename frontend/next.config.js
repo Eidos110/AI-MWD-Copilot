@@ -14,10 +14,6 @@ const nextConfig = {
         destination: `${RAILWAY_BACKEND}/api/:path*`,
       },
       {
-        source: '/ws/:path*',
-        destination: `${RAILWAY_BACKEND.replace(/^http/, 'ws')}/ws/:path*`,
-      },
-      {
         source: '/health',
         destination: `${RAILWAY_BACKEND}/health`,
       },
