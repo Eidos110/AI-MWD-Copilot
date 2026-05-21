@@ -15,4 +15,4 @@ ENV MWD_CORS_ORIGINS=["*"]
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn backend.app:app --host 0.0.0.0 --port $PORT"]
+CMD ["python", "-c", "import os; import uvicorn; uvicorn.run('backend.app:app', host='0.0.0.0', port=int(os.environ.get('PORT', 8000)))"]
