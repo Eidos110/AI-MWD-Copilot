@@ -227,4 +227,4 @@ logs/
 
 
 # kilo
-.kilo/
+.kilo/\n# Large binaries\nrailway-cli.tar.gz\nrailway-cli.zip\nrender-cli.zip\nrender-cli/
