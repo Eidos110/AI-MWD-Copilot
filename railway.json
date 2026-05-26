@@ -10,6 +10,7 @@
     {
       "name": "mwd-frontend",
       "rootDirectory": "frontend",
+      "dockerfilePath": "Dockerfile",
       "buildCommand": "npm ci && npm run build",
       "startCommand": "node server.js"
     }
