@@ -2,10 +2,16 @@
   "$schema": "https://railway.app/railway.schema.json",
   "services": [
     {
+      "name": "mwd-backend",
+      "rootDirectory": "backend",
+      "buildCommand": "pip install -r requirements.txt",
+      "startCommand": "uvicorn backend.app:app --host 0.0.0.0 --port $PORT"
+    },
+    {
       "name": "mwd-frontend",
-      "rootDirectory": "",
-      "buildCommand": "npm run build",
-      "startCommand": "npm run start"
+      "rootDirectory": "frontend",
+      "buildCommand": "npm ci && npm run build",
+      "startCommand": "node server.js"
     }
   ]
 }
