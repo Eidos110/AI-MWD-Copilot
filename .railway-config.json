@@ -1,172 +1,51 @@
-# Railway Deployment Status — AI-MWD-Copilot
+# Railway Deployment Status — AI-MWD-COPILOT
 
-> **Project**: AI-MWD-Copilot  
-> **Project Root**: `E:\Code\Well-Logging-AI-AWD-Copilot-Deepseek`  
-> **Last Updated**: 2026-05-19  
-> **Status**: mwd-backend fresh deploy triggered; mwd-frontend env var & redeploy pending 
-> **Railway Project**: `AI-MWD-Copilot` (`e48445d1-96b0-4ae5-807f-936e0c810009`)  
-> **Railway Env**: `production` (`3a99af65-5039-4521-b81e-4a4b5e9fe47a`)
+> **Project**: AI-MWD-COPILOT  
+> **Status**: ⚠️ Backend in deployment, Frontend OK
 
 ---
 
-## Services Overview
+## Services
 
-| Service | Service ID | Domain | Status |
-|---------|-----------|--------|--------|
-| `mwd-backend`  | `25d24257` | `mwd-backend-production.up.railway.app` | 🔄 Redeploy triggered |
-| `mwd-frontend` | `5876f291` | _(pending)_ | ⏳ Config + variables pending |
-
----
-
-## mwd-backend — `25d24257`
-
-### Current Railway Instance Config
-
-| Field | Value |
-|-------|-------|
-| Builder | RAILPACK (legacy) |
-| rootDirectory | `backend` |
-| buildCommand | `pip install -r requirements.txt` |
-| startCommand | `uvicorn backend.app:app --host 0.0.0.0 --port 8000` |
-| healthcheckPath | `/health` |
-
-### Root Causes & Fixes (already committed)
-
-| # | Cause | Fix Applied |
-|---|-------|-------------|
-| 1 | Root `Dockerfile` exposed port 8080 (legacy); Railway injects `PORT=8000` but healthcheck used `${PORT:-8000}` while container bound only to 8080 | `EXPOSE 8000` ✓ |
-| 2 | `start.sh` hardcoded shebang without `exec` pattern causing PID 1 mismatch | `exec uvicorn ...` + `PORT=${PORT:-8000}` ✓ |
-| 3 | `@asynccontextmanager` lifespan blocked FastAPI during ML model load (~10s) | Background `threading.Thread(daemon=True)` at import time ✓ |
-
-### Build Logs
-
-Latest deploy triggered: `railway up --service mwd-backend --detach`  
-Log URL: https://railway.com/project/e48445d1-96b0-4ae5-807f-936e0c810009/service/25d24257-bda3-4fa0-a6ab-4f797107da8e?id=9d11abe5-b654-4265-aa93-9e46bedf2e08
+| Service | URL | Status |
+|---------|-----|--------|
+| mwd-backend | https://mwd-backend-production-f958.up.railway.app | ACTIVE (success from May 26) |
+| mwd-frontend | https://mwd-frontend-production.up.railway.app | ✅ SUCCESS |
 
 ---
 
-## mwd-frontend — `5876f291`
+## SHAP Performance Issue - Summary
 
-### Current Railway Instance Config
+### Problem
+- SHAP computation takes **4-5 minutes** untuk 500 data samples di Free Tier
+- Timeout 120 detik tidak cukup
+- User experience buruk - tombol "Explain" tidak menghasilkan output
 
-| Field | Value |
-|-------|-------|
-| Builder | RAILPACK (legacy) |
-| rootDirectory | _(not set)_ |
-| dockerfilePath | _(not set)_ |
-| buildCommand | _(not set)_ |
-| startCommand | _(not set)_ |
-| healthcheckPath | _(not set)_ |
+### Root Cause
+- ExactExplainer: O(n×m) kompleksitas tinggi
+- PermutationExplainer: Bahkan lebih lambat (71 detik/sample)
+- TreeExplainer: Gagal karena model XGBoost tidak kompatibel dengan serialisasi
 
-### Root Causes & Fixes
+### Workarounds Tried
+1. ✅ Timeout increased: 60s → 120s
+2. ✅ Data limiting: max 100 samples
+3. ❌ TreeExplainer: Error kompatibilitas
+4. ❌ Feature importance bypass: Masih error deployment
 
-| # | Cause | Fix Status |
-|---|-------|-----------|
-| 1 | Build/start/dockerfile config applied **after** build started; Railway does not re-trigger | Pending fresh deploy |
-| 2 | Multi-stage `frontend/Dockerfile` copies from `.next/standalone`; correct | ✓ File ready |
-| 3 | `NEXT_PUBLIC_API_URL` must be set in Railway service env vars, **not** hardcoded | ⏳ Needs user action via Railway dashboard |
-
-### Required Config
-
-```json
-{
-  "builder": "DOCKERFILE",
-  "rootDirectory": "frontend",
-  "dockerfilePath": "Dockerfile",
-  "buildCommand": "npm ci && npm run build",
-  "startCommand": "node server.js",
-  "healthcheckPath": "/"
-}
-```
-
-### Required Env Vars
-
-| Variable | Value |
-|----------|-------|
-| `NEXT_PUBLIC_API_URL` | `https://mwd-backend-production.up.railway.app` |
+### Current State
+- Backend active deployment masih menggunakan SHAP lambat
+- Front-end sudah siap menerima data importance
+- Untuk testing: gunakan data < 50 samples atau tunggu hasil SHAP (beberapa menit)
 
 ---
 
-## Root Dockerfile — `Dockerfile` (repo root)
-
-```dockerfile
-FROM python:3.10-slim
-
-WORKDIR /app
-RUN apt-get update && apt-get install -y build-essential curl && rm -rf /var/lib/apt/lists/*
-
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
-
-COPY backend/             /app/backend/
-COPY start.sh             /app/start.sh
-RUN chmod +x /app/start.sh
-
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
-
-EXPOSE 8000
-
-CMD ["/app/start.sh"]
-```
-
-### start.sh
+## Manual Testing SHAP
 
 ```bash
-#!/bin/bash
-set -euo pipefail
-
-echo "Starting AI MWD Copilot..."
-
-PORT=${PORT:-8000}
-echo "Using port: $PORT"
-
-cd /app
-echo "Starting FastAPI backend on port $PORT..."
-exec uvicorn backend.app:app --host 0.0.0.0 --port "$PORT"
+# Test dengan data kecil (< 10 samples)
+curl -X POST https://mwd-backend-production-f958.up.railway.app/api/v1/shap/explain \
+  -H "Content-Type: application/json" \
+  -d '{"model":"porosity","data":[{"DEPTH":2000,"Gamma Ray - Corrected gAPI":50,"Resistivity Phase - Corrected - 2MHz ohm.m":100,"Corrected Drilling Exponent unitless":1.5,"ROP for the Bit - Distance Over Time (On Bottom) m/s":0.1,"Surface Torque Average N.m":5000,"Weight On Bit N":10000,"Chrom 1 Total Gas Euc":5}],"top_n":3}'
 ```
 
----
-
-## Frontend Dockerfile — `frontend/Dockerfile`
-
-```dockerfile
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM node:20-alpine
-WORKDIR /app
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-
-ENV NODE_ENV=production
-ENV PORT=3000
-EXPOSE 3000
-CMD ["node", "server.js"]
-```
-
----
-
-## Railway CLI Notes
-
-- CLI user: `Popaye` (`popaye625@gmail.com`)
-- GitHub is **not linked** to Railway; `railway variables` / `railway up` requiring git access will fail
-- When GitHub is linked: `git push origin main` → auto-deploy
-- Manual deploy via CLI (once GitHub linked): `railway up --service mwd-backend`
-
----
-
-## Required User Actions
-
-- [ ] **Link GitHub** to Railway (Railway dashboard → Settings → Integrations → GitHub) to enable `railway up` / auto-deploy
-- [ ] **Set env var** `NEXT_PUBLIC_API_URL=https://mwd-backend-production.up.railway.app` via Railway dashboard for `mwd-frontend`
-- [ ] **Switch mwd-backend** to DOCKERFILE builder (via Railway dashboard: Settings → Build & Deploy → Dockerfile, root `Dockerfile`)
-- [ ] **Switch mwd-frontend** to DOCKERFILE builder (via Railway dashboard: Settings → Build & Deploy → Dockerfile, `frontend/Dockerfile`)
-- [ ] **Trigger fresh deploy** for both services after config changes
-- [ ] **Verify** `GET https://mwd-backend-production.up.railway.app/health` → `{"status":"healthy"}`
-- [ ] **Verify** `GET <mwd-frontend-domain>/health` → proxies to backend, returns `{"status":"healthy"}`
+**Catatan**: Prediksi ini akan butuh 1-2 menit.

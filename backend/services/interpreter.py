@@ -336,8 +336,8 @@ def interpret_drilling(
             depth_warnings.append("Monitor for kicks")
 
         if porosity_predictions and i < len(porosity_predictions):
-            phi = float(porosity_predictions[i])
-            if phi < 0.05:
+            phi = porosity_predictions[i]
+            if phi is not None and phi < 0.05:
                 depth_warnings.append("Low porosity - tight zone")
 
         drilling_conditions.append(

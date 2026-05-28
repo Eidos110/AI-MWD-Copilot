@@ -7,19 +7,25 @@ RUN npm ci
 
 COPY . .
 
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://mwd-backend-production-f958.up.railway.app}
+
 RUN npm run build
 
-FROM node:20-alpine
-
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=https://mwd-backend-production-f958.up.railway.app
 ENV PORT=3000
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+ENV PORT=3000
+
+CMD ["npm", "run", "start"]

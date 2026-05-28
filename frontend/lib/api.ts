@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { WellDataRow, AllPredictions, DataQualityReport, ShapResult, UploadResponse } from '@/types';
 
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+
 export const apiClient = axios.create({
-  baseURL: '/api/v1',
-  timeout: 60000,
+  baseURL: apiBaseUrl ? `${apiBaseUrl}/api/v1` : '/api/v1',
+  timeout: 120000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -30,7 +32,7 @@ export async function predictAll(
   includeConfidence = true
 ): Promise<AllPredictions> {
   const { data } = await apiClient.post('/predict/all', {
-    data: dataRows,
+    data: dataRows.slice(0, 500),
     depth_range: depthRange,
     include_confidence: includeConfidence,
   });
@@ -38,19 +40,20 @@ export async function predictAll(
 }
 
 export async function getQualityReport(dataRows: WellDataRow[]): Promise<DataQualityReport> {
-  const { data } = await apiClient.post('/quality/report', { data: dataRows });
+  const { data } = await apiClient.post('/quality/report', { data: dataRows.slice(0, 500) });
   return data;
 }
 
 export async function getShapExplanation(
   model: 'porosity' | 'fluid' | 'pressure',
   dataRows: WellDataRow[],
-  topN = 5
+  topN = 3
 ): Promise<ShapResult> {
   const { data } = await apiClient.post('/shap/explain', {
     model,
-    data: dataRows,
+    data: dataRows.slice(0, 100),
     top_n: topN,
+    max_samples: 100,
   });
   return data;
 }
@@ -60,7 +63,7 @@ export async function getInterpretation(
   depthRange?: { min: number; max: number }
 ): Promise<any> {
   const { data } = await apiClient.post('/interpret/all', {
-    data: dataRows,
+    data: dataRows.slice(0, 500),
     depth_range: depthRange,
     include_confidence: true,
   });
