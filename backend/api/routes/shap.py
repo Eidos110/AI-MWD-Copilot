@@ -100,7 +100,12 @@ async def explain_model(req: ShapRequest):
             raise HTTPException(status_code=400, detail=f"Unknown model: {req.model}")
 
         booster = model.get_booster()
-        gains = booster.feature_importances_
+        try:
+            gains = booster.feature_importances_
+        except AttributeError:
+            gains_dict = booster.get_score(importance_type="gain")
+            import numpy as np
+            gains = np.array([gains_dict.get(str(i), 0) for i in range(len(features))])
 
         df = pd.DataFrame({
             "Original Name": features,
