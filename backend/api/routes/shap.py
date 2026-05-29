@@ -103,9 +103,9 @@ async def explain_model(req: ShapRequest):
         try:
             gains = booster.feature_importances_
         except AttributeError:
-            gains_dict = booster.get_score(importance_type="gain")
             import numpy as np
-            gains = np.array([gains_dict.get(str(i), 0) for i in range(len(features))])
+            gains_dict = booster.get_score(importance_type="gain")
+            gains = np.array([gains_dict.get(f, 0.0) for f in features])
 
         df = pd.DataFrame({
             "Original Name": features,
