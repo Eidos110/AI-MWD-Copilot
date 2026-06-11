@@ -4,7 +4,7 @@ Real-Time Machine Learning for Drilling Decision Support
 
 **Prepared by**: Eidos/W_Isnal, Data Science & Geophysics
 
-**Version**: 3.0 (FastAPI + Next.js)  
+**Version**: 2.0 (FastAPI + Next.js)  
 **Date**: January 2026
 
 
@@ -270,41 +270,6 @@ The frontend service uses a **multi-stage `frontend/Dockerfile`** based on Node 
 
 
 ---
-
----
-
-## Railway Deployment
-
-> **Railway Project**: AI-MWD-Copilot  
-> **Environment**: production  
-> **Backend URL**: https://mwd-backend-production.up.railway.app  
-> **Frontend URL**: _(pending — service `mwd-frontend` not yet live)_
-
-### Services
-
-| Service | ID | Status |
-|---------|-----|--------|
-| `mwd-backend` | `25d24257` | 🔄 Fresh deploy triggered |
-| `mwd-frontend` | `5876f291` | ⏳ Config + env vars pending |
-
-### Prerequisites
-
-1. **Link GitHub to Railway** — required for `railway up` and auto-deploys  
-   Railway dashboard → Settings → Integrations → GitHub
-
-2. **Set environment variables** on Railway:
-   - `MWD_CORS_ORIGINS` → `["*"]` (on backend)
-   - `NEXT_PUBLIC_API_URL` → `https://mwd-backend-production.up.railway.app` (on frontend)
-
-### Manual Deploy (via CLI)
-
-```bash
-# Backend (from repo root — uses root Dockerfile)
-railway up --service mwd-backend --detach
-
-# Frontend (uses frontend/Dockerfile multi-stage build)
-railway up --service mwd-frontend --detach
-```
 
 ### Architecture Notes
 
