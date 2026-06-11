@@ -46,9 +46,9 @@ The application will be available at:
 
 | Service | Local URL | Railway URL |
 |---------|-----------|-------------|
-| Frontend (Next.js) | http://localhost:3000 | _(pending — mwd-frontend not yet deployed)_ |
-| Backend (FastAPI) | http://localhost:8000 | https://mwd-backend-production.up.railway.app |
-| API Docs | http://localhost:8000/docs | https://mwd-backend-production.up.railway.app/docs |
+| Frontend (Next.js) | http://localhost:3000 | https://mwd-frontend-production.up.railway.app |
+| Backend (FastAPI) | http://localhost:8000 | https://mwd-backend-production-f958.up.railway.app |
+| API Docs | http://localhost:8000/docs | https://mwd-backend-production-f958.up.railway.app/docs |
 
 ### Stop the Application
 
