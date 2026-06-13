@@ -1,1 +1,0 @@
-{"query": "{ serviceInstance(id: \"25d24257-bda3-4fa0-a6ab-4f797107da8e\") { id service { id name } config } }"}
